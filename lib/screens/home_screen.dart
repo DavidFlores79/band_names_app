@@ -116,15 +116,37 @@ class BandCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        child: Text(band.name.substring(0, 2)),
-      ),
-      title: Text(band.name),
-      trailing: Text('${band.votes}'),
-      onTap: () {
+    return Dismissible(
+      direction: DismissDirection.startToEnd,
+      onDismissed: (direction) {
+        print(direction);
         print(band.name);
       },
+      background: Container(
+        padding: const EdgeInsets.only(left: 10),
+        color: Colors.red,
+        child: const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Delete Band',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+      key: Key(band.id),
+      child: ListTile(
+        leading: CircleAvatar(
+          child: Text(band.name.substring(0, 2)),
+        ),
+        title: Text(band.name),
+        trailing: Text('${band.votes}'),
+        onTap: () {
+          print(band.name);
+        },
+      ),
     );
   }
 }
