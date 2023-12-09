@@ -15,7 +15,16 @@ class StatusScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: Center(
-        child: Text('Server Status: ${socketService.serverStatus}'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Server Status: ${socketService.serverStatus}'),
+            MaterialButton(
+              child: const Text('Hola Mundo!'),
+              onPressed: () => socketService.emitMessage('Hola mundo!!'),
+            )
+          ],
+        ),
       ),
     );
   }

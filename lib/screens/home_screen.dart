@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:band_names_app/models/bands.dart';
+import 'package:band_names_app/services/socket_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = 'home';
@@ -20,11 +22,41 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
+  void initState() {
+    final socketService = Provider.of<SocketService>(context, listen: false);
+    socketService.socket.on(
+        'active-bands',
+        (payload) => {
+              print('listao de bandas'),
+              bands =
+                  (payload as List).map((band) => Band.fromMap(band)).toList(),
+              setState(() {})
+            });
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final socketService = Provider.of<SocketService>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Band Names'),
         centerTitle: true,
+        actions: [
+          Container(
+            padding: const EdgeInsets.only(right: 10),
+            child: (socketService.serverStatus == ServerStatus.Online)
+                ? const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                  )
+                : const Icon(
+                    Icons.offline_bolt,
+                    color: Colors.red,
+                  ),
+          )
+        ],
       ),
       body: ListView.builder(
         itemCount: bands.length,
@@ -59,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
               CupertinoDialogAction(
                 isDefaultAction: true,
                 child: const Text('Add Band'),
-                onPressed: () => saveNewBand(textController.text),
+                onPressed: () => saveNewBand(textController.text, context),
               ),
               CupertinoDialogAction(
                 isDestructiveAction: true,
@@ -83,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialButton(
                 textColor: Colors.blue,
                 child: const Text('Add'),
-                onPressed: () => saveNewBand(textController.text),
+                onPressed: () => saveNewBand(textController.text, context),
               )
             ],
           );
@@ -92,21 +124,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  saveNewBand(String text) {
-    print(text);
-    bands.add(
-      Band(
-        id: DateTime.now().toString(),
-        name: text,
-        votes: 0,
-      ),
+  saveNewBand(String text, BuildContext context) {
+    final socketService = Provider.of<SocketService>(context, listen: false);
+
+    if (text.isEmpty) return;
+
+    final band = Band(
+      id: DateTime.now().toString(),
+      name: text,
+      votes: 0,
     );
+    bands.add(band);
+    socketService.socket.emit('add-band', {
+      'id': band.id,
+      'name': band.name,
+      'votes': band.votes,
+    });
     setState(() {});
     Navigator.pop(context);
   }
 }
 
-class BandCard extends StatelessWidget {
+class BandCard extends StatefulWidget {
   const BandCard({
     super.key,
     required this.band,
@@ -115,12 +154,20 @@ class BandCard extends StatelessWidget {
   final Band band;
 
   @override
+  State<BandCard> createState() => _BandCardState();
+}
+
+class _BandCardState extends State<BandCard> {
+  @override
   Widget build(BuildContext context) {
+    final socketService = Provider.of<SocketService>(context, listen: false);
+
     return Dismissible(
       direction: DismissDirection.startToEnd,
       onDismissed: (direction) {
         print(direction);
-        print(band.name);
+        print(widget.band.name);
+        socketService.socket.emit('remove-band', widget.band.id);
       },
       background: Container(
         padding: const EdgeInsets.only(left: 10),
@@ -136,15 +183,16 @@ class BandCard extends StatelessWidget {
           ),
         ),
       ),
-      key: Key(band.id),
+      key: Key(widget.band.id),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text(band.name.substring(0, 2)),
+          child: Text(widget.band.name.substring(0, 2)),
         ),
-        title: Text(band.name),
-        trailing: Text('${band.votes}'),
+        title: Text(widget.band.name),
+        trailing: Text('${widget.band.votes}'),
         onTap: () {
-          print(band.name);
+          print(widget.band.id);
+          socketService.socket.emit('vote-band', widget.band.id);
         },
       ),
     );

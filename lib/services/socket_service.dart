@@ -1,3 +1,4 @@
+import 'package:band_names_app/models/bands.dart';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -9,6 +10,13 @@ enum ServerStatus {
 
 class SocketService with ChangeNotifier {
   ServerStatus _serverStatus = ServerStatus.Connecting;
+  late IO.Socket _socket;
+
+  IO.Socket get socket => _socket;
+
+  set socket(IO.Socket value) {
+    _socket = value;
+  }
 
   ServerStatus get serverStatus => _serverStatus;
 
@@ -23,20 +31,25 @@ class SocketService with ChangeNotifier {
   }
 
   void _initConfig() {
-    IO.Socket socket = IO.io('http://192.168.100.8:3001', {
+    socket = IO.io('http://192.168.100.8:3001', {
       'transports': ['websocket'],
       'autoConnect': true,
     });
 
     socket.onConnect((_) {
-      print('connect');
+      print('connected to Server');
       serverStatus = ServerStatus.Online;
     });
-    socket.on('event', (data) => print(data));
+    socket.on('message', (data) => print(data));
+
     socket.onDisconnect((_) {
-      print('disconnect');
+      print('Lost Server Connection!!');
       serverStatus = ServerStatus.Offline;
     });
     socket.on('fromServer', (_) => print(_));
+  }
+
+  emitMessage(String message) {
+    socket.emit('flutter-message', {'type': 'Fluter', 'message': message});
   }
 }
